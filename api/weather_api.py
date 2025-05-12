@@ -100,3 +100,10 @@ def get_forecast_by_city(city: str, country: Optional[str] = None) -> Dict[str, 
     """
     q = f"{city},{country}" if country else city
     return _call_api("forecast", {"q": q})
+
+
+
+
+
+
+
