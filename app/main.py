@@ -278,12 +278,14 @@ def get_info_by_loc_date(loc_id: int, date_str: str, db: Session = Depends(get_d
     Returns:
         WeatherInfo: The WeatherInfo object for the specified location and date.
     """
-    info_date = date.fromisoformat(date_str)
+    try:
+        info_date = date.fromisoformat(date_str)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     info = crud.get_info_by_loc_date(db, loc_id, info_date)
     if not info:
         raise HTTPException(status_code=404, detail="Weather info not found")
     return info
-
 
 
 
@@ -301,9 +303,14 @@ def get_infos_by_loc_date_range(loc_id: int, start_date: str, end_date: str, db:
     Returns:
         List[WeatherInfo]: A list of WeatherInfo objects for the specified location and date range.
     """
-    start = date.fromisoformat(start_date)
-    end = date.fromisoformat(end_date)
+    try:
+        start = date.fromisoformat(start_date)
+        end = date.fromisoformat(end_date)
+    except ValueError:
+        raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
     infos = crud.get_infos_by_loc_date_range(db, loc_id, start, end)
+    if not infos:
+        raise HTTPException(status_code=404, detail="Weather info not found")
     return infos
 
 
