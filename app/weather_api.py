@@ -104,6 +104,28 @@ def get_forecast_by_city(city: str, country: Optional[str] = None) -> Dict[str, 
 
 
 
+def get_forecast_by_date_and_city(date: str, city: str, country: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    Lookup weather forecast for a specific date by city name.
+    
+    Args:
+        date: The specific date in 'YYYY-MM-DD' format
+        city: The name of the city to look up
+        country: Optional country code
+        
+    Returns:
+        A JSON dictionary containing the weather forecast data for the specific date,
+        or None if no forecast is available for that date.
+    """
+    forecast = get_forecast_by_city(city, country)
+    for entry in forecast.get("list", []):
+        if entry["dt_txt"].startswith(date):
+            return entry
+    return None
+
+
+
+
 
 
 

@@ -20,9 +20,7 @@ SessionLocal = sessionmaker(
 )
 Base = declarative_base()
 
-
-
-
+# Create a new database session for each request
 def get_db():
     """
     Create a new database session for each request.

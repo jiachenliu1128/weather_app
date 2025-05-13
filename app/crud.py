@@ -158,7 +158,33 @@ def list_info(
     return db.query(WeatherInfo).offset(skip).limit(limit).all()
 
 
-def get_info_by_location_and_date(
+def get_info_by_loc_date(
+    db: Session,
+    location_id: int,
+    date: date,
+) -> List[WeatherInfo]:
+    """
+    Retrieve info for a location of a date.
+    
+    Args:
+        db: Database session
+        location_id: ID of the location
+        date: Date to look up
+        
+    Returns:  
+        A list of WeatherInfo database objects. 
+    """
+    return (
+        db.query(WeatherInfo)
+        .filter(
+            WeatherInfo.location_id == location_id,
+            WeatherInfo.date == date
+        )
+        .first()
+    )
+
+
+def get_info_by_loc_date_range(
     db: Session,
     location_id: int,
     start_date: date,
