@@ -3,6 +3,7 @@ from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import date
 import crud
+from database_model import WeatherLocation, WeatherInfo
 from database import Base, engine, get_db
 from weather_api import get_weather_by_city, get_forecast_by_date_and_city
 
@@ -10,11 +11,14 @@ from weather_api import get_weather_by_city, get_forecast_by_date_and_city
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Weather APP Backend API")
 
+
+
+
 ################################################################################
 # WeatherLocation API Endpoints
 ################################################################################
 @app.post("/locations/", summary="Create a new location")
-def create_location(location: dict, db: Session = Depends(get_db)):
+def create_location(location: dict, db: Session = Depends(get_db)) -> WeatherLocation:
     """
     Create a new location in the database.
 
@@ -36,8 +40,11 @@ def create_location(location: dict, db: Session = Depends(get_db)):
     db_loc = crud.create_location(db, city=city, country=country, lat=lat, lon=lon)
     return db_loc
 
+
+
+
 @app.get("/locations/", summary="List locations")
-def list_locations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
+def list_locations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)) -> list[WeatherLocation]:
     """
     List all stored locations with pagination.
 
@@ -51,8 +58,12 @@ def list_locations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
     """
     return crud.list_locations(db, skip=skip, limit=limit)
 
+
+
+
+
 @app.delete("/locations/{loc_id}", summary="Delete a location")
-def delete_location(loc_id: int, db: Session = Depends(get_db)):
+def delete_location(loc_id: int, db: Session = Depends(get_db)) -> WeatherLocation:
     """
     Delete a location by its ID.
 
@@ -78,7 +89,7 @@ def delete_location(loc_id: int, db: Session = Depends(get_db)):
 # WeatherInfo API Endpoints
 ################################################################################
 @app.post("/weather_infos/", summary="Fetch and store weather info for a location and date range")
-def create_info(input: dict, db: Session = Depends(get_db)):
+def create_info(input: dict, db: Session = Depends(get_db)) -> list[WeatherInfo]:
     """
     Fetch and store weather information for a given location and date range.
 
@@ -160,34 +171,143 @@ def create_info(input: dict, db: Session = Depends(get_db)):
     return infos
     
 
+
+
 @app.get("/weather_infos/", summary="List stored weather infos")
-def list_weather_infos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
-    return crud.list_weather_infos(db, skip=skip, limit=limit)
+def list_infos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)) -> list[WeatherInfo]:
+    """
+    List all stored weather information with pagination.
+
+    Args:
+        skip (int, optional): item to skip for pagination. Defaults to 0.
+        limit (int, optional): maximum number of items to return. Defaults to 100.
+        db (Session, optional): A database session. Defaults to Depends(get_db).
+        
+    Returns:
+        List[WeatherInfo]: A list of WeatherInfo objects.
+    """
+    return crud.list_infos(db, skip=skip, limit=limit)
+
+
+
+
 
 @app.get("/weather_infos/{info_id}", summary="Get a specific weather info")
-def read_weather_info(info_id: int, db: Session = Depends(get_db)):
-    info = crud.get_weather_info(db, info_id)
+def get_info(info_id: int, db: Session = Depends(get_db)) -> WeatherInfo:
+    """
+    Get a specific weather info by its ID.
+
+    Args:
+        info_id (int): The ID of the weather info to retrieve.
+        db (Session, optional): A database session. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: If the weather info is not found, a 404 error is raised.
+
+    Returns:
+        WeatherInfo: The requested WeatherInfo object.
+    """
+    info = crud.get_info(db, info_id)
     if not info:
         raise HTTPException(status_code=404, detail="Weather info not found")
     return info
+
+
+
 
 @app.put("/weather_infos/{info_id}", summary="Update weather info fields")
-def update_weather_info(info_id: int, updates: dict, db: Session = Depends(get_db)):
-    info = crud.update_weather_info(db, info_id, updates)
+def update_info(info_id: int, updates: dict, db: Session = Depends(get_db)) -> WeatherInfo:
+    """
+    Update specific fields of a weather info.
+
+    Args:
+        info_id (int): The ID of the weather info to update.
+        updates (dict): A dictionary containing the fields to update. Expected keys are:
+            - temperature: The new temperature value
+            - weather_description: The new weather description
+            - raw_data: The new raw data string
+        db (Session, optional): A database session. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: If the weather info is not found, a 404 error is raised.
+
+    Returns:
+        WeatherInfo: The updated WeatherInfo object.
+    """
+    info = crud.update_info(db, info_id, updates)
     if not info:
         raise HTTPException(status_code=404, detail="Weather info not found")
     return info
+
+
+
 
 @app.delete("/weather_infos/{info_id}", summary="Delete weather info")
-def delete_weather_info(info_id: int, db: Session = Depends(get_db)):
-    info = crud.delete_weather_info(db, info_id)
+def delete_weather_info(info_id: int, db: Session = Depends(get_db)) -> WeatherInfo:
+    """
+    Delete a weather info by its ID.
+
+    Args:
+        info_id (int): The ID of the weather info to delete.
+        db (Session, optional): A database session. Defaults to Depends(get_db).
+
+    Raises:
+        HTTPException: If the weather info is not found, a 404 error is raised.
+
+    Returns:
+        WeatherInfo: The deleted WeatherInfo object.
+    """
+    info = crud.delete_info(db, info_id)
     if not info:
         raise HTTPException(status_code=404, detail="Weather info not found")
     return info
 
-@app.get("/weather_infos/by_location/{loc_id}", summary="Get infos by location and date range")
-def get_infos_by_location_and_date(loc_id: int, start_date: str, end_date: str, db: Session = Depends(get_db)):
+
+
+
+@app.get("/weather_infos/by_loc_date/{loc_id}", summary="Get infos by location and specific date")
+def get_info_by_loc_date(loc_id: int, date_str: str, db: Session = Depends(get_db)) -> WeatherInfo:
+    """
+    Retrieve weather information for a specific location and date.
+
+    Args:
+        loc_id (int): The ID of the location.
+        date_str (str): The date to retrieve info for (format: YYYY-MM-DD).
+        db (Session, optional): A database session. Defaults to Depends(get_db).
+
+    Returns:
+        WeatherInfo: The WeatherInfo object for the specified location and date.
+    """
+    info_date = date.fromisoformat(date_str)
+    info = crud.get_info_by_loc_date(db, loc_id, info_date)
+    if not info:
+        raise HTTPException(status_code=404, detail="Weather info not found")
+    return info
+
+
+
+
+@app.get("/weather_infos/by_loc_date_range/{loc_id}", summary="Get infos by location and date range")
+def get_infos_by_loc_date_range(loc_id: int, start_date: str, end_date: str, db: Session = Depends(get_db)) -> list[WeatherInfo]:
+    """
+    Retrieve weather information for a specific location and date range.
+
+    Args:
+        loc_id (int): The ID of the location.
+        start_date (str): The start date for the range (format: YYYY-MM-DD).
+        end_date (str): The end date for the range (format: YYYY-MM-DD).
+        db (Session, optional): A database session. Defaults to Depends(get_db).
+
+    Returns:
+        List[WeatherInfo]: A list of WeatherInfo objects for the specified location and date range.
+    """
     start = date.fromisoformat(start_date)
     end = date.fromisoformat(end_date)
-    infos = crud.get_infos_by_location_and_date(db, loc_id, start, end)
+    infos = crud.get_infos_by_loc_date_range(db, loc_id, start, end)
     return infos
+
+
+
+
+
+
