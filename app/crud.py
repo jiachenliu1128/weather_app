@@ -140,7 +140,7 @@ def get_info(db: Session, info_id: int) -> Optional[WeatherInfo]:
     return db.query(WeatherInfo).filter(WeatherInfo.id == info_id).first()
 
 
-def list_info(
+def list_infos(
     db: Session,
     skip: int = 0,
     limit: int = 100
@@ -185,7 +185,7 @@ def get_info_by_loc_date(
     )
 
 
-def get_info_by_loc_date_range(
+def get_infos_by_loc_date_range(
     db: Session,
     location_id: int,
     start_date: date,
