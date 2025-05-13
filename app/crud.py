@@ -4,8 +4,9 @@ from datetime import date
 from sqlalchemy.orm import Session
 from database_model import WeatherLocation, WeatherInfo
 
+################################################################################
 # WeatherLocation CRUD operations
-
+################################################################################
 def create_location(
     db: Session,
     city: str,
@@ -87,9 +88,9 @@ def delete_location(db: Session, loc_id: int) -> Optional[WeatherLocation]:
 
 
 
-
-# WeatherInfo CRUD
-
+################################################################################
+# WeatherInfo CRUD operations
+################################################################################
 def create_info(
     db: Session,
     location_id: int,

@@ -4,16 +4,15 @@ from sqlalchemy.orm import Session
 from datetime import date
 import crud
 from database import Base, engine, get_db
-from weather_api import get_weather_by_city, get_forecast_by_city
+from weather_api import get_weather_by_city, get_forecast_by_date_and_city
 
 # Initialize the database and api
 Base.metadata.create_all(bind=engine)
 app = FastAPI(title="Weather APP Backend API")
 
-
-
-
+################################################################################
 # WeatherLocation API Endpoints
+################################################################################
 @app.post("/locations/", summary="Create a new location")
 def create_location(location: dict, db: Session = Depends(get_db)):
     """
@@ -75,8 +74,9 @@ def delete_location(loc_id: int, db: Session = Depends(get_db)):
 
 
 
-
+################################################################################
 # WeatherInfo API Endpoints
+################################################################################
 @app.post("/weather_infos/", summary="Fetch and store weather info for a location and date range")
 def create_info(input: dict, db: Session = Depends(get_db)):
     """
@@ -142,7 +142,7 @@ def create_info(input: dict, db: Session = Depends(get_db)):
             if current == date.today():
                 info_data = get_weather_by_city(city, country)
             else:
-                info_data = get_forecast_by_city(city, country)
+                info_data = get_forecast_by_date_and_city(city, country)
             # Store the weather info in the database
             temp = info_data["main"]["temp"]
             desc = info_data["weather"][0]["description"]
