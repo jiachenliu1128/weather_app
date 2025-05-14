@@ -1,4 +1,3 @@
-# main.py
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
 from datetime import date
@@ -6,6 +5,7 @@ import crud
 from database_model import WeatherLocation, WeatherInfo
 from database import Base, engine, get_db
 from weather_api import get_weather_by_city, get_forecast_by_date_and_city
+from youtube_api import search_youtube_videos
 
 # Initialize the database and api
 Base.metadata.create_all(bind=engine)
@@ -337,6 +337,41 @@ def export_json(db: Session = Depends(get_db)):
       for info in crud.list_infos(db, skip=0, limit=-1) 
     ]
     return data
+
+
+################################################################################
+# YouTube API Endpoints
+################################################################################
+@app.get(
+    "/videos/{loc_id}",
+    summary="Fetch top YouTube videos for a location"
+)
+def get_location_videos(
+    loc_id: int,
+    max_results: int = 3,
+    db: Session = Depends(get_db)
+):
+    """
+    Return up to `max_results` YouTube videos related to weather in the specified location.
+    
+    Args:
+        loc_id (int): The ID of the location.
+        max_results (int, optional): The maximum number of results to return. Defaults to 3.
+        db (Session, optional): A database session. Defaults to Depends(get_db).
+        
+    Raises:
+        HTTPException: If the location is not found, a 404 error is raised.
+        
+    Returns:
+        dict: A dictionary containing the location and a list of YouTube videos.
+    """
+    loc = crud.get_location_by_id(db, loc_id)
+    if not loc:
+        raise HTTPException(status_code=404, detail="Location not found")
+
+    query = f"weather in {loc.city}" + (f", {loc.country}" if loc.country else "")
+    videos = search_youtube_videos(query, max_results=max_results)
+    return {"location": loc.city, "videos": videos}
 
 
 
