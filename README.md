@@ -5,6 +5,7 @@
 This project is a FastAPI backend featuring a SQL database for persistent storage and CRUD operations of weather data by city and date. It supports fetching and storing real-time weather information, exporting data, and is enriched with YouTube weather-related video suggestions and Google Maps integration.
 
 **About Product Manager Accelerator:** 
+
 Product Manager Accelerator is a global training community that empowers aspiring product managers with real-world projects, mentorship, and career coaching to accelerate their transition into product management roles.
 
 **To activate the local FastAPI server by uvicorn:**
