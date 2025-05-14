@@ -383,7 +383,7 @@ def get_location_videos(
     Returns:
         dict: A dictionary containing the location and a list of YouTube videos.
     """
-    loc = crud.get_location_by_id(db, location_id)
+    loc = crud.get_location(db, location_id)
     if not loc:
         raise HTTPException(status_code=404, detail="Location not found")
 

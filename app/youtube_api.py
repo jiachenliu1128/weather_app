@@ -41,7 +41,6 @@ def search_youtube_videos(
             "video_id": vid_id,
             "title": snippet["title"],
             "description": snippet["description"],
-            "thumbnail_url": snippet["thumbnails"]["default"]["url"],
             "watch_url": f"https://www.youtube.com/watch?v={vid_id}"
         })
     return results

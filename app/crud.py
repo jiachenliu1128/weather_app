@@ -33,6 +33,20 @@ def create_location(
     return db_loc
 
 
+def get_location(db: Session, loc_id: int) -> Optional[WeatherLocation]:
+    """
+    Retrieve a single location by ID.
+    
+    Args:
+        db: Database session
+        loc_id: ID of the location to retrieve
+        
+    Returns:
+        A WeatherLocation database object if found, otherwise None.
+    """
+    return db.query(WeatherLocation).filter(WeatherLocation.id == loc_id).first()
+
+
 def get_location_by_city(db: Session, city: str, country: Optional[str] = None) -> Optional[WeatherLocation]:
     """
     Retrieve a location by city (and optional country code).
