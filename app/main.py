@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 from datetime import date, timedelta
 from . import crud
@@ -184,7 +185,7 @@ def create_info(input: dict, db: Session = Depends(get_db)):
                 weather_description=desc
                 # raw_data=raw
             )
-        infos.append(info)
+        infos.append(jsonable_encoder(info))
         current += timedelta(days=1)
     return infos
     

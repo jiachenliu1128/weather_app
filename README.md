@@ -1,6 +1,10 @@
 # 🌦️ Weather App Backend API
 
+**Developed by: Jiachen Liu (刘稼晨)**
+
 This project is a FastAPI backend featuring a SQL database for persistent storage and CRUD operations of weather data by city and date. It supports fetching and storing real-time weather information, exporting data, and is enriched with YouTube weather-related video suggestions and Google Maps integration.
+
+**About Product Manager Accelerator:** Product Manager Accelerator is a global training community that empowers aspiring product managers with real-world projects, mentorship, and career coaching to accelerate their transition into product management roles.
 
 **To activate the local FastAPI server by uvicorn:**
 ```bash
@@ -14,7 +18,7 @@ uvicorn app.main:app --reload
 - GET /locations/ – List all stored locations
 - DELETE /locations/{location_id} – Delete a location
 
-**Examples (by uvicorn):**
+**Examples:**
 ```bash
 # Create a location
 curl -X POST http://127.0.0.1:8000/locations/ \
