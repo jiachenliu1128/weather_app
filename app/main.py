@@ -314,6 +314,31 @@ def get_infos_by_loc_date_range(loc_id: int, start_date: str, end_date: str, db:
     return infos
 
 
+################################################################################
+# Data Export API Endpoints
+################################################################################
+@app.get("/export/json", summary="Export all weather infos as JSON")
+def export_json(db: Session = Depends(get_db)):
+    data = [ 
+      {
+        "id": info.id,
+        "date": info.info_date.isoformat(),
+        "temperature": info.temperature,
+        "description": info.weather_description,
+        "raw_data": info.raw_data,
+        "location": {
+            "id": info.location.id,
+            "city": info.location.city,
+            "country": info.location.country,
+            "lat": info.location.lat,
+            "lon": info.location.lon
+        }
+      }
+      for info in crud.list_infos(db, skip=0, limit=-1) 
+    ]
+    return data
+
+
 
 
 

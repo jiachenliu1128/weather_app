@@ -52,18 +52,22 @@ def get_location_by_city(db: Session, city: str, country: Optional[str] = None) 
     return query.first()
 
 
-def list_locations(db: Session, skip: int = 0, limit: int = 100) -> List[WeatherLocation]:
+def list_locations(db: Session, skip: int = 0, limit: int = -1) -> List[WeatherLocation]:
     """
     List stored locations with pagination.
     
     Args:
         db: Database session
         skip: Number of records to skip (for pagination)
-        limit: Maximum number of records to return
+        limit: Maximum number of records to return. If -1, return all records.  
     
     Returns:
         A list of WeatherLocation database objects.
     """
+    if limit < -1:
+        raise ValueError("The 'limit' parameter must be -1 or a non-negative integer.")
+    if limit == -1:
+        return db.query(WeatherLocation).offset(skip).all()
     return db.query(WeatherLocation).offset(skip).limit(limit).all()
 
 
@@ -96,7 +100,7 @@ def create_info(
     location_id: int,
     info_date: date,
     temperature: float,
-    description: str,
+    weather_description: str,
     raw_data: str
 ) -> WeatherInfo:
     """
@@ -107,18 +111,23 @@ def create_info(
         location_id: ID of the location
         info_date: Date of the weather info
         temperature: Temperature value
-        description: Weather description
+        weather_description: Weather description
         raw_data: Raw data string
         
     Returns:    
         A WeatherInfo database object.
     """
+    # get the location to ensure it exists
+    location = db.query(WeatherLocation).get(location_id)
+    if not location:
+        raise ValueError(f"Location with ID {location_id} does not exist.")
     db_info = WeatherInfo(
         location_id=location_id,
         date=info_date,
         temperature=temperature,
-        weather_description=description,
-        raw_data=raw_data
+        weather_description=weather_description,
+        raw_data=raw_data,
+        location=location
     )
     db.add(db_info)
     db.commit()
@@ -143,19 +152,23 @@ def get_info(db: Session, info_id: int) -> Optional[WeatherInfo]:
 def list_infos(
     db: Session,
     skip: int = 0,
-    limit: int = 100
+    limit: int = -1
 ) -> List[WeatherInfo]:
     """
-    List weather info with pagination.
+    List all weather info with pagination.
     
     Args:
         db: Database session
         skip: Number of records to skip 
-        limit: Maximum number of records to return
+        limit: Maximum number of records to return. If -1, return all records.
         
     Returns:
         A list of WeatherInfo database objects.
     """
+    if limit < -1:
+        raise ValueError("The 'limit' parameter must be -1 or a non-negative integer.")
+    if limit == -1:
+        return db.query(WeatherInfo).offset(skip).all()
     return db.query(WeatherInfo).offset(skip).limit(limit).all()
 
 
