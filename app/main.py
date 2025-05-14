@@ -1,11 +1,11 @@
 from fastapi import FastAPI, Depends, HTTPException
 from sqlalchemy.orm import Session
-from datetime import date
-import crud
-from database_model import WeatherLocation, WeatherInfo
-from database import Base, engine, get_db
-from weather_api import get_weather_by_city, get_forecast_by_date_and_city
-from youtube_api import search_youtube_videos
+from datetime import date, timedelta
+from . import crud
+from .database_model import WeatherLocation, WeatherInfo
+from .database import Base, engine, get_db
+from .weather_api import get_weather_by_city, get_forecast_by_date_and_city
+from .youtube_api import search_youtube_videos
 
 # Initialize the database and api
 Base.metadata.create_all(bind=engine)
@@ -17,7 +17,7 @@ app = FastAPI(title="Weather APP Backend API")
 # WeatherLocation API Endpoints
 ################################################################################
 @app.post("/locations/", summary="Create a new location")
-def create_location(location: dict, db: Session = Depends(get_db)) -> WeatherLocation:
+def create_location(location: dict, db: Session = Depends(get_db)):
     """
     Create a new location in the database.
 
@@ -28,6 +28,9 @@ def create_location(location: dict, db: Session = Depends(get_db)) -> WeatherLoc
             - lat: Latitude (optional)
             - lon: Longitude (optional)
         db (Session, optional): A database session. Defaults to Depends(get_db).
+    
+    Raises:
+        HTTPException: If the city is not provided or if the location already exists, a 400 error is raised.
 
     Returns:
         WeatherLocation: The created WeatherLocation object.
@@ -36,6 +39,22 @@ def create_location(location: dict, db: Session = Depends(get_db)) -> WeatherLoc
     country = location.get("country")
     lat = location.get("lat")
     lon = location.get("lon")
+    
+    # Validate input
+    if not city:
+        raise HTTPException(status_code=400, detail="city is required")
+    if not lat or not lon:
+        # Fetch lat/lon from OpenWeather API if not provided
+        data = get_weather_by_city(city, country)
+        lat = data["coord"]["lat"]
+        lon = data["coord"]["lon"]
+        
+    # Check if required location is present
+    db_loc = crud.get_location_by_city(db, city, country)
+    if db_loc:
+        raise HTTPException(status_code=400, detail="Location already exists")
+    
+    # Create new location  
     db_loc = crud.create_location(db, city=city, country=country, lat=lat, lon=lon)
     return db_loc
 
@@ -43,7 +62,7 @@ def create_location(location: dict, db: Session = Depends(get_db)) -> WeatherLoc
 
 
 @app.get("/locations/", summary="List locations")
-def list_locations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)) -> list[WeatherLocation]:
+def list_locations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
     List all stored locations with pagination.
 
@@ -61,13 +80,13 @@ def list_locations(skip: int = 0, limit: int = 100, db: Session = Depends(get_db
 
 
 
-@app.delete("/locations/{loc_id}", summary="Delete a location")
-def delete_location(loc_id: int, db: Session = Depends(get_db)) -> WeatherLocation:
+@app.delete("/locations/{location_id}", summary="Delete a location")
+def delete_location(location_id: int, db: Session = Depends(get_db)):
     """
     Delete a location by its ID.
 
     Args:
-        loc_id (int): The ID of the location to delete.
+        location_id (int): The ID of the location to delete.
         db (Session, optional): A database session. Defaults to Depends(get_db).
 
     Raises:
@@ -76,7 +95,7 @@ def delete_location(loc_id: int, db: Session = Depends(get_db)) -> WeatherLocati
     Returns:
         WeatherLocation: The deleted WeatherLocation object.
     """
-    loc = crud.delete_location(db, loc_id)
+    loc = crud.delete_location(db, location_id)
     if not loc:
         raise HTTPException(status_code=404, detail="Location not found")
     return loc
@@ -88,7 +107,7 @@ def delete_location(loc_id: int, db: Session = Depends(get_db)) -> WeatherLocati
 # WeatherInfo API Endpoints
 ################################################################################
 @app.post("/weather_infos/", summary="Fetch and store weather info for a location and date range")
-def create_info(input: dict, db: Session = Depends(get_db)) -> list[WeatherInfo]:
+def create_info(input: dict, db: Session = Depends(get_db)):
     """
     Fetch and store weather information for a given location and date range.
 
@@ -130,8 +149,8 @@ def create_info(input: dict, db: Session = Depends(get_db)) -> list[WeatherInfo]
     if start < date.today() or end < date.today():
         raise HTTPException(status_code=400, detail="Historical data is not supported in free OpenWeather API")
     # Check if the date range is more than 5 days in the future
-    if (start > date.today() + date.timedelta(days=5) or 
-        end > date.today() + date.timedelta(days=5)):
+    if (start > date.today() + timedelta(days=5) or 
+        end > date.today() + timedelta(days=5)):
         raise HTTPException(status_code=400, detail="Max 5 days forecast supported in free OpenWeather API")
     
     # Get or create location
@@ -152,7 +171,7 @@ def create_info(input: dict, db: Session = Depends(get_db)) -> list[WeatherInfo]
             if current == date.today():
                 info_data = get_weather_by_city(city, country)
             else:
-                info_data = get_forecast_by_date_and_city(city, country)
+                info_data = get_forecast_by_date_and_city(current, city, country)
             # Store the weather info in the database
             temp = info_data["main"]["temp"]
             desc = info_data["weather"][0]["description"]
@@ -162,18 +181,18 @@ def create_info(input: dict, db: Session = Depends(get_db)) -> list[WeatherInfo]
                 location_id=loc.id,
                 info_date=current,
                 temperature=temp,
-                description=desc,
-                raw_data=raw
+                weather_description=desc
+                # raw_data=raw
             )
         infos.append(info)
-        current += date.timedelta(days=1)
+        current += timedelta(days=1)
     return infos
     
 
 
 
 @app.get("/weather_infos/", summary="List stored weather infos")
-def list_infos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)) -> list[WeatherInfo]:
+def list_infos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)):
     """
     List all stored weather information with pagination.
 
@@ -192,7 +211,7 @@ def list_infos(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)) -
 
 
 @app.get("/weather_infos/{info_id}", summary="Get a specific weather info")
-def get_info(info_id: int, db: Session = Depends(get_db)) -> WeatherInfo:
+def get_info(info_id: int, db: Session = Depends(get_db)):
     """
     Get a specific weather info by its ID.
 
@@ -215,7 +234,7 @@ def get_info(info_id: int, db: Session = Depends(get_db)) -> WeatherInfo:
 
 
 @app.put("/weather_infos/{info_id}", summary="Update weather info fields")
-def update_info(info_id: int, updates: dict, db: Session = Depends(get_db)) -> WeatherInfo:
+def update_info(info_id: int, updates: dict, db: Session = Depends(get_db)):
     """
     Update specific fields of a weather info.
 
@@ -242,7 +261,7 @@ def update_info(info_id: int, updates: dict, db: Session = Depends(get_db)) -> W
 
 
 @app.delete("/weather_infos/{info_id}", summary="Delete weather info")
-def delete_weather_info(info_id: int, db: Session = Depends(get_db)) -> WeatherInfo:
+def delete_weather_info(info_id: int, db: Session = Depends(get_db)):
     """
     Delete a weather info by its ID.
 
@@ -264,13 +283,13 @@ def delete_weather_info(info_id: int, db: Session = Depends(get_db)) -> WeatherI
 
 
 
-@app.get("/weather_infos/by_loc_date/{loc_id}", summary="Get infos by location and specific date")
-def get_info_by_loc_date(loc_id: int, date_str: str, db: Session = Depends(get_db)) -> WeatherInfo:
+@app.get("/weather_infos/by_loc_date/{location_id}", summary="Get infos by location and specific date")
+def get_info_by_loc_date(location_id: int, look_up_date: str, db: Session = Depends(get_db)):
     """
     Retrieve weather information for a specific location and date.
 
     Args:
-        loc_id (int): The ID of the location.
+        location_id (int): The ID of the location.
         date_str (str): The date to retrieve info for (format: YYYY-MM-DD).
         db (Session, optional): A database session. Defaults to Depends(get_db).
 
@@ -278,23 +297,23 @@ def get_info_by_loc_date(loc_id: int, date_str: str, db: Session = Depends(get_d
         WeatherInfo: The WeatherInfo object for the specified location and date.
     """
     try:
-        info_date = date.fromisoformat(date_str)
+        info_date = date.fromisoformat(look_up_date)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-    info = crud.get_info_by_loc_date(db, loc_id, info_date)
+    info = crud.get_info_by_loc_date(db, location_id, info_date)
     if not info:
         raise HTTPException(status_code=404, detail="Weather info not found")
     return info
 
 
 
-@app.get("/weather_infos/by_loc_date_range/{loc_id}", summary="Get infos by location and date range")
-def get_infos_by_loc_date_range(loc_id: int, start_date: str, end_date: str, db: Session = Depends(get_db)) -> list[WeatherInfo]:
+@app.get("/weather_infos/by_loc_date_range/{location_id}", summary="Get infos by location and date range")
+def get_infos_by_loc_date_range(location_id: int, start_date: str, end_date: str, db: Session = Depends(get_db)):
     """
     Retrieve weather information for a specific location and date range.
 
     Args:
-        loc_id (int): The ID of the location.
+        location_id (int): The ID of the location.
         start_date (str): The start date for the range (format: YYYY-MM-DD).
         end_date (str): The end date for the range (format: YYYY-MM-DD).
         db (Session, optional): A database session. Defaults to Depends(get_db).
@@ -307,7 +326,7 @@ def get_infos_by_loc_date_range(loc_id: int, start_date: str, end_date: str, db:
         end = date.fromisoformat(end_date)
     except ValueError:
         raise HTTPException(status_code=400, detail="Invalid date format. Use YYYY-MM-DD")
-    infos = crud.get_infos_by_loc_date_range(db, loc_id, start, end)
+    infos = crud.get_infos_by_loc_date_range(db, location_id, start, end)
     if not infos:
         raise HTTPException(status_code=404, detail="Weather info not found")
     return infos
@@ -316,15 +335,15 @@ def get_infos_by_loc_date_range(loc_id: int, start_date: str, end_date: str, db:
 ################################################################################
 # Data Export API Endpoints
 ################################################################################
-@app.get("/export/json", summary="Export all weather infos as JSON")
+@app.get("/export/json", summary="Export all weather infos and location as JSON")
 def export_json(db: Session = Depends(get_db)):
     data = [ 
       {
         "id": info.id,
-        "date": info.info_date.isoformat(),
+        "date": info.date.isoformat(),
         "temperature": info.temperature,
         "description": info.weather_description,
-        "raw_data": info.raw_data,
+        # "raw_data": info.raw_data,
         "location": {
             "id": info.location.id,
             "city": info.location.city,
@@ -342,11 +361,11 @@ def export_json(db: Session = Depends(get_db)):
 # YouTube API Endpoints
 ################################################################################
 @app.get(
-    "/videos/{loc_id}",
+    "/videos/{location_id}",
     summary="Fetch top YouTube videos for a location"
 )
 def get_location_videos(
-    loc_id: int,
+    location_id: int,
     max_results: int = 3,
     db: Session = Depends(get_db)
 ):
@@ -354,7 +373,7 @@ def get_location_videos(
     Return up to `max_results` YouTube videos related to weather in the specified location.
     
     Args:
-        loc_id (int): The ID of the location.
+        location_id (int): The ID of the location.
         max_results (int, optional): The maximum number of results to return. Defaults to 3.
         db (Session, optional): A database session. Defaults to Depends(get_db).
         
@@ -364,7 +383,7 @@ def get_location_videos(
     Returns:
         dict: A dictionary containing the location and a list of YouTube videos.
     """
-    loc = crud.get_location_by_id(db, loc_id)
+    loc = crud.get_location_by_id(db, location_id)
     if not loc:
         raise HTTPException(status_code=404, detail="Location not found")
 

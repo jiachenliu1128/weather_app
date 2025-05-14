@@ -1,6 +1,6 @@
 from sqlalchemy import Column, Integer, String, Float, Date, ForeignKey
 from sqlalchemy.orm import relationship
-from database import Base
+from .database import Base
 
 class WeatherLocation(Base):
     __tablename__ = "locations"
@@ -20,7 +20,7 @@ class WeatherInfo(Base):
     date = Column(Date, index=True)       
     temperature = Column(Float, nullable=False)   
     weather_description = Column(String, nullable=True)    
-    raw_data = Column(String, nullable=True)          
+    # raw_data = Column(String, nullable=True)          
     location = relationship("WeatherLocation", back_populates="info")
     
     

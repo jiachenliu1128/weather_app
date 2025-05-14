@@ -1,8 +1,7 @@
-# crud.py
 from typing import Optional, List, Dict, Any
 from datetime import date
 from sqlalchemy.orm import Session
-from database_model import WeatherLocation, WeatherInfo
+from .database_model import WeatherLocation, WeatherInfo
 
 ################################################################################
 # WeatherLocation CRUD operations
@@ -101,7 +100,7 @@ def create_info(
     info_date: date,
     temperature: float,
     weather_description: str,
-    raw_data: str
+    # raw_data: str
 ) -> WeatherInfo:
     """
     Create a new weather info linked to a location.
@@ -126,7 +125,7 @@ def create_info(
         date=info_date,
         temperature=temperature,
         weather_description=weather_description,
-        raw_data=raw_data,
+        # raw_data=raw_data,
         location=location
     )
     db.add(db_info)
